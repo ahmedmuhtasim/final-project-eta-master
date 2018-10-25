@@ -223,7 +223,6 @@ void OS_Wait(Sema4Type *semaPt){
 		RunPt->blockPt = semaPt;
 		OS_EnableInterrupts();
 		OS_Suspend();
-		OS_DisableInterrupts();
 	}
 	OS_EnableInterrupts();
 #else
@@ -283,7 +282,6 @@ void OS_bWait(Sema4Type *semaPt){
 		RunPt->blockPt = semaPt;
 		OS_EnableInterrupts();
 		OS_Suspend();
-		OS_DisableInterrupts();
 	}
 	OS_EnableInterrupts();
 #else
