@@ -303,7 +303,8 @@ void OS_bSignal(Sema4Type *semaPt){
 #ifdef blockSema
 	tcbType *pt;
 	OS_DisableInterrupts();
-	semaPt->Value += 1;
+	if(semaPt->Value < 1)
+		semaPt->Value += 1;
 	if (semaPt->Value <= 0){
 		pt = RunPt->next;
 		while (pt->blockPt != semaPt){
