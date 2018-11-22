@@ -13,6 +13,9 @@
 #define LCD_GREY       0x8410   // 128, 128, 
 
 
+// Used to fill for a cube
+void PaintCube(unsigned short x, unsigned short y, uint16_t color);
+
 // ------------BSP_LCD_Init------------
 // Initialize the SPI and GPIO, which correspond with
 // BoosterPack pins J1.7 (SPI CLK), J2.13 (SPI CS), J2.15

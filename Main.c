@@ -93,7 +93,7 @@ void CubeThread (void){
 	// assign shape
 	
 	// assign location
-	
+	PaintCube(0, 0, thisCube->color);	// give proper location
 	// assign direction
 	
 	// assign lifeTime
