@@ -52,6 +52,8 @@ typedef struct {
 	unsigned int idle;	// 0 or 1
 	unsigned int hit;	// 0 or 1
 	unsigned int	expired; // Counts down by the 1ms software timer for each CubeArray member
+	unsigned int x;	// current x
+	unsigned int y; // current y
 	unsigned int dir; 	// 0 = N, 1 = E, 2 = S, 3 = W
 	uint16_t color;	 		// get colors from LCD.h, 
 } cube;
@@ -60,6 +62,16 @@ cube CubeArray[NUMOFCUBES];
 
 // Return random value from 0 to range-1
 unsigned int Random(unsigned short range)
+{
+	return 0;
+}
+
+unsigned int GetCrossHairX()
+{
+	return 0;
+}
+
+unsigned int GetCrossHairY()
 {
 	return 0;
 }
@@ -98,18 +110,18 @@ void CubeThread (void){
 	thisCube->expired = LIFEOFCUBE;
 	
 	// 3.move the cube while it is not hit or expired
-	while(life){ // Implement until the game is over
+	while(life){ 
 		while (!thisCube->hit && !thisCube->expired){
-			// first, check if the object is hit by the crosshair
+			if (thisCube->x == GetCrossHairX() && thisCube->y == GetCrossHairY())
+				thisCube->hit = 1;
 			
 			if(thisCube->hit){
 				score++;
-				//OS_bSignal(&BlockArray[i][j].BlockFree);
-				// second, check if the object is expired
+				OS_bSignal(&BlockArray[thisCube->x][thisCube->y].BlockFree);
 			}
 			else if (thisCube->expired){
 				life--;
-				//OS_bSignal(&BlockArray[i][j].BlockFree);
+				OS_bSignal(&BlockArray[thisCube->x][thisCube->y].BlockFree);
 			}
 			else{
 				// if the object is neither hit nor expired,
