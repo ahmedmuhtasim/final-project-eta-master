@@ -30,6 +30,11 @@
 #define NUMOFCUBES	5				// Max number of cubess
 #define LIFEOFCUBE 10000		// presently 10 seconds for milisecond unit
 
+uint16_t colors[11] = {LCD_WHITE, LCD_GREY, 
+LCD_RED, LCD_GREEN, LCD_CYAN, LCD_ORANGE, 
+LCD_YELLOW, LCD_LIGHTGREEN, LCD_DARKBLUE,
+LCD_MAGENTA, LCD_ORANGE};
+
 // Global variables for life and score
 unsigned int life = 10;
 unsigned int score = 0;
@@ -44,16 +49,16 @@ block BlockArray[HORIZONTALNUM][VERTICALNUM];
 
 // Struct for representing a cube
 typedef struct {
-	unsigned char idle;	// 0 or 1
-	unsigned char hit;	// 0 or 1
-	unsigned int	expired; // Counts down
-	unsigned char dir; // 0 = N, 1 = E, 2 = S, 3 = W
+	unsigned int idle;	// 0 or 1
+	unsigned int hit;	// 0 or 1
+	unsigned int	expired; // Counts down by the 1ms software timer for each CubeArray member
+	unsigned int dir; 	// 0 = N, 1 = E, 2 = S, 3 = W
 	uint16_t color;	 		// get colors from LCD.h, 
 } cube;
 
 cube CubeArray[NUMOFCUBES];
 
-// Return random value from 0 to range
+// Return random value from 0 to range-1
 unsigned int Random(unsigned short range)
 {
 	return 0;
@@ -76,26 +81,19 @@ void CubeThread (void){
 		OS_Kill();				// This means that thisCube is null. That would indicate that all the cubes are taken and so this thread should be killed.
 		
 	// 2.initialize color/shape and the first direction
-	
-	// asign color
-	unsigned int color = Random(5);
-	if (color == 0)
-		thisCube->color = LCD_RED;
-	if (color == 1)
-		thisCube->color = LCD_GREEN;
-	if (color == 2)
-		thisCube->color = LCD_CYAN;
-	if (color == 3)
-		thisCube->color = LCD_YELLOW;
-	if (color == 4)
-		thisCube->color = LCD_ORANGE;
-	
+	// asign color, There may be multiples of same color (unlikely tho)...
+	thisCube->color = colors[Random(11)];
 	// assign shape
 	
+	unsigned int i, j;
 	// assign location
-	PaintCube(0, 0, thisCube->color);	// give proper location
+	do{
+		i = Random(6); j = Random(6);
+		PaintCube(0, 0, thisCube->color);	// give proper location
+	}
+	while (BlockArray[i][j].BlockFree.Value);
 	// assign direction
-	
+	thisCube->dir = Random(4);
 	// assign lifeTime
 	thisCube->expired = LIFEOFCUBE;
 	
@@ -124,7 +122,6 @@ void CubeThread (void){
 	}
 	OS_Kill(); //Life = 0, game is over, kill the thread
 }
-
 
 extern Sema4Type LCDFree;
 uint16_t origin[2]; 	// The original ADC value of x,y if the joystick is not touched, used as reference
