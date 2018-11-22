@@ -25,6 +25,81 @@
 #define LIFETIME             	1000
 #define RUNLENGTH            	600 // 30 seconds run length
 
+#define VERTICALNUM 6
+#define HORIZONTALNUM 6
+#define NUMOFCUBES	5				// Max number of cubess
+#define LIFEOFCUBE 10000		// presently 10 seconds for milisecond unit
+
+// Global variables for life and score
+unsigned int life = 10;
+unsigned int score = 0;
+
+// Struct for breaking screen into blocks
+typedef struct {
+ uint32_t position[2];
+ Sema4Type BlockFree;
+} block;
+
+block BlockArray[HORIZONTALNUM][VERTICALNUM];
+
+// Struct for representing a cube
+typedef struct {
+	unsigned char idle;	// 0 or 1
+	unsigned char hit;	// 0 or 1
+	unsigned int	expired; // Counts down
+	unsigned char dir; // 0 = N, 1 = E, 2 = S, 3 = W
+	uint16_t color;	 		// get colors from LCD.h, 
+} cube;
+
+cube CubeArray[NUMOFCUBES];
+
+// Return random value from 0 to range
+unsigned int Random(unsigned short range)
+{
+	return 0;
+}
+
+void CubeThread (void){
+	unsigned char hit, expired;
+	
+	unsigned int n;
+	for (n = 0; n < NUMOFCUBES; n++){
+		if (CubeArray[n].idle){
+			CubeArray[n].idle = 0;
+			break;
+		}
+	}
+	
+	
+	// 1.allocate an idle cube for the object
+	// 2.initialize color/shape and the first direction
+	// 3.move the cube while it is not hit or expired
+	while(life){ // Implement until the game is over
+		while (!hit && !expired){
+			// first, check if the object is hit by the crosshair
+			
+			if(hit){
+				score++;
+				//OS_bSignal(&BlockArray[i][j].BlockFree);
+				// second, check if the object is expired
+			}
+			else if (expired){
+				life--;
+				//OS_bSignal(&BlockArray[i][j].BlockFree);
+			}
+			else{
+				// if the object is neither hit nor expired,
+				// update the cube information
+				// then, display the object
+				// last,decide next direction
+			}
+		}
+		OS_Kill(); // Cube should disappear, kill the thread
+	}
+	OS_Kill(); //Life = 0, game is over, kill the thread
+}
+
+
 extern Sema4Type LCDFree;
 uint16_t origin[2]; 	// The original ADC value of x,y if the joystick is not touched, used as reference
 int16_t x = 63;  			// horizontal position of the crosshair, initially 63
