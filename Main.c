@@ -60,30 +60,56 @@ unsigned int Random(unsigned short range)
 }
 
 void CubeThread (void){
-	unsigned char hit, expired;
+	// 1.allocate an idle cube for the object
+	cube * thisCube;		// Points to the cube assigned to this thread
 	
 	unsigned int n;
 	for (n = 0; n < NUMOFCUBES; n++){
 		if (CubeArray[n].idle){
 			CubeArray[n].idle = 0;
+			thisCube = &(CubeArray[n]);
 			break;
 		}
 	}
 	
-	
-	// 1.allocate an idle cube for the object
+	if (&thisCube == 0)
+		OS_Kill();				// This means that thisCube is null. That would indicate that all the cubes are taken and so this thread should be killed.
+		
 	// 2.initialize color/shape and the first direction
+	
+	// asign color
+	unsigned int color = Random(5);
+	if (color == 0)
+		thisCube->color = LCD_RED;
+	if (color == 1)
+		thisCube->color = LCD_GREEN;
+	if (color == 2)
+		thisCube->color = LCD_CYAN;
+	if (color == 3)
+		thisCube->color = LCD_YELLOW;
+	if (color == 4)
+		thisCube->color = LCD_ORANGE;
+	
+	// assign shape
+	
+	// assign location
+	
+	// assign direction
+	
+	// assign lifeTime
+	thisCube->expired = LIFEOFCUBE;
+	
 	// 3.move the cube while it is not hit or expired
 	while(life){ // Implement until the game is over
-		while (!hit && !expired){
+		while (!thisCube->hit && !thisCube->expired){
 			// first, check if the object is hit by the crosshair
 			
-			if(hit){
+			if(thisCube->hit){
 				score++;
 				//OS_bSignal(&BlockArray[i][j].BlockFree);
 				// second, check if the object is expired
 			}
-			else if (expired){
+			else if (thisCube->expired){
 				life--;
 				//OS_bSignal(&BlockArray[i][j].BlockFree);
 			}
