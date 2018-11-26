@@ -1455,8 +1455,10 @@ void BSP_LCD_DrawCrosshair(int16_t x, int16_t y, int16_t color) {
 	BSP_LCD_DrawFastHLine(x-4, y, 9, color);
 }
 
-// Used to fill for a cube
+// Used to fill for a cube - currently assumes a 6x6 grid
 void PaintCube(unsigned short x, unsigned short y, uint16_t color)
 {
-	// Need to implement
+	unsigned int cube_width = MAX_WIDTH / 6;
+	unsigned int cube_height = MAX_HEIGHT / 6;
+	BSP_LCD_FillRect(x*cube_width, y*cube_height, cube_width, cube_height, color);
 }

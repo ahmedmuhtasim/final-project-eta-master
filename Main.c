@@ -95,6 +95,7 @@ void CubeThread (void){
 	cube * thisCube;		// Points to the cube assigned to this thread
 	
 	unsigned int n;
+	unsigned int i, j;
 	for (n = 0; n < NUMOFCUBES; n++){
 		if (CubeArray[n].idle){
 			CubeArray[n].idle = 0;
@@ -111,7 +112,6 @@ void CubeThread (void){
 	thisCube->color = colors[Random(11)];
 	// assign shape
 	
-	unsigned int i, j;
 	// assign location
 	do{
 		i = Random(6); j = Random(6);
@@ -124,7 +124,7 @@ void CubeThread (void){
 	thisCube->expired = LIFEOFCUBE;
 	
 	// 3.move the cube while it is not hit or expired
-	while(life){ 
+	while(life){
 		while (!thisCube->hit && !thisCube->expired){
 			if (thisCube->x == GetCrossHairX() && thisCube->y == GetCrossHairY())
 				thisCube->hit = 1;
@@ -492,15 +492,20 @@ void CrossHair_Init(void){
 }
 
 //******************* Main Function**********
-int main(void){ 
-  OS_Init();           // initialize, disable interrupts
+int main(void){
+  int i;
+	OS_Init();           // initialize, disable interrupts
 	Device_Init();
   CrossHair_Init();
   DataLost = 0;        // lost data between producer and consumer
   NumSamples = 0;
   MaxJitter = 0;       // in 1us units
 	PseudoCount = 0;
-
+	
+	for(i = 0; i < 6; i++)
+		PaintCube(i, 0, colors[i]);
+	
+	
 //********initialize communication channels
   JsFifo_Init();
 
@@ -515,7 +520,8 @@ int main(void){
   NumCreated += OS_AddThread(&Interpreter, 128, 2); 
   NumCreated += OS_AddThread(&Consumer, 128, 1); 
 	NumCreated += OS_AddThread(&CubeNumCalc, 128, 3); 
-	NumCreated += OS_AddThread(&Display, 128, 3);
+	//NumCreated += OS_AddThread(&Display, 128, 3);
+ 
  
   OS_Launch(TIME_2MS); // doesn't return, interrupts enabled in here
 	return 0;            // this never executes

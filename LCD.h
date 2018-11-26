@@ -12,6 +12,8 @@
 #define LCD_WHITE      0xFFFF   // 255, 255, 255
 #define LCD_GREY       0x8410   // 128, 128, 
 
+#define MAX_WIDTH 128
+#define MAX_HEIGHT 108
 
 // Used to fill for a cube
 void PaintCube(unsigned short x, unsigned short y, uint16_t color);
