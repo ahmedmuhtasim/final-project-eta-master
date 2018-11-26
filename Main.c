@@ -39,6 +39,9 @@ LCD_MAGENTA, LCD_ORANGE};
 unsigned int life = 10;
 unsigned int score = 0;
 
+// Global variable for PRNG
+unsigned int Xn;
+
 // Struct for breaking screen into blocks
 typedef struct {
  uint32_t position[2];
@@ -60,10 +63,21 @@ typedef struct {
 
 cube CubeArray[NUMOFCUBES];
 
+// Seed PRNG
+void seedRandom(unsigned int seed) {
+	Xn = seed;
+}
+
 // Return random value from 0 to range-1
+// using Linear Congruential Generator
 unsigned int Random(unsigned short range)
 {
-	return 0;
+	unsigned int m = 2147483647;
+	unsigned int a = 16807;
+	unsigned int c = 0;
+	
+	Xn = (a * Xn + c) % m;
+	return Xn % range;
 }
 
 unsigned int GetCrossHairX()
