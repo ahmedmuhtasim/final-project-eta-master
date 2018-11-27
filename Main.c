@@ -42,6 +42,8 @@ unsigned int score = 0;
 // Global variable for PRNG
 unsigned int Xn;
 
+extern Sema4Type LCDFree;
+
 // Struct for breaking screen into blocks
 typedef struct {
  uint32_t position[2];
@@ -63,6 +65,22 @@ typedef struct {
 
 cube CubeArray[NUMOFCUBES];
 
+// Initialize Cube and Block Arrays
+void initCubes(void) {
+	int i, j;
+	for(i = 0; i < NUMOFCUBES; i++) {
+		CubeArray[i].idle = 1;
+	}
+	
+	for(i = 0; i < HORIZONTALNUM; i++) {
+		for(j = 0; j < VERTICALNUM; j++) {
+			BlockArray[i][j].position[0] = i;
+			BlockArray[i][j].position[1] = j;
+			OS_InitSemaphore(&(BlockArray[i][j].BlockFree), 1);
+		}
+	}
+}
+
 // Seed PRNG
 void seedRandom(unsigned int seed) {
 	Xn = seed;
@@ -82,17 +100,17 @@ unsigned int Random(unsigned short range)
 
 unsigned int GetCrossHairX()
 {
-	return 0;
+	return 47;
 }
 
 unsigned int GetCrossHairY()
 {
-	return 0;
+	return 47;
 }
 
 void CubeThread (void){
 	// 1.allocate an idle cube for the object
-	cube * thisCube;		// Points to the cube assigned to this thread
+	cube *thisCube = 0;		// Points to the cube assigned to this thread
 	
 	unsigned int n;
 	unsigned int i, j;
@@ -115,33 +133,114 @@ void CubeThread (void){
 	// assign location
 	do{
 		i = Random(6); j = Random(6);
-		PaintCube(0, 0, thisCube->color);	// give proper location
-	}
-	while (BlockArray[i][j].BlockFree.Value);
+	} while (BlockArray[i][j].BlockFree.Value == 0);
+	
+	// Paint cube's initial position
+	thisCube->x = i;
+	thisCube->y = j;
+	PaintCube(thisCube->x, thisCube->y, thisCube->color);
+	
 	// assign direction
 	thisCube->dir = Random(4);
+	
+	// cube is not hit yet
+	thisCube->hit = 0;
+	
 	// assign lifeTime
 	thisCube->expired = LIFEOFCUBE;
 	
 	// 3.move the cube while it is not hit or expired
 	while(life){
-		while (!thisCube->hit && !thisCube->expired){
+		while (!thisCube->hit && thisCube->expired != 0){
 			if (thisCube->x == GetCrossHairX() && thisCube->y == GetCrossHairY())
 				thisCube->hit = 1;
 			
 			if(thisCube->hit){
 				score++;
+				OS_bWait(&LCDFree);
+				PaintCube(thisCube->x, thisCube->y, LCD_BLACK);
+				OS_bSignal(&LCDFree);
 				OS_bSignal(&BlockArray[thisCube->x][thisCube->y].BlockFree);
 			}
-			else if (thisCube->expired){
+			else if (thisCube->expired == 0){
 				life--;
+				OS_bWait(&LCDFree);
+				PaintCube(thisCube->x, thisCube->y, LCD_BLACK);
+				OS_bSignal(&LCDFree);
 				OS_bSignal(&BlockArray[thisCube->x][thisCube->y].BlockFree);
 			}
 			else{
-				// if the object is neither hit nor expired,
-				// update the cube information
-				// then, display the object
-				// last,decide next direction
+				// Moving North
+				if(thisCube->dir == 0) {
+					// If we've hit north wall, pick new direction
+					if(thisCube->y == 0) {
+						do {
+							thisCube->dir = Random(4);
+						} while(thisCube->dir == 0);
+					}
+					else {
+						OS_bWait(&LCDFree);
+						PaintCube(thisCube->x, thisCube->y, LCD_BLACK);
+						(thisCube->y)--;
+						PaintCube(thisCube->x, thisCube->y, thisCube->color);
+						OS_bSignal(&LCDFree);
+					}
+				}
+				
+				// Moving West
+				else if (thisCube->dir == 1) {
+					// If we've hit west wall, pick new direction
+					if(thisCube->x == 0) {
+						do {
+							thisCube->dir = Random(4);
+						} while(thisCube->dir == 1);
+					}
+					else {
+						OS_bWait(&LCDFree);
+						PaintCube(thisCube->x, thisCube->y, LCD_BLACK);
+						(thisCube->x)--;
+						PaintCube(thisCube->x, thisCube->y, thisCube->color);
+						OS_bSignal(&LCDFree);
+					}
+				}
+				
+				// Moving East
+				else if(thisCube->dir == 2) {
+					// If we've hit east wall, pick new direction
+					if(thisCube->x == HORIZONTALNUM - 1) {
+						do {
+							thisCube->dir = Random(4);
+						} while(thisCube->dir == 2);
+					}
+					else {
+						OS_bWait(&LCDFree);
+						PaintCube(thisCube->x, thisCube->y, LCD_BLACK);
+						(thisCube->x)++;
+						PaintCube(thisCube->x, thisCube->y, thisCube->color);
+						OS_bSignal(&LCDFree);
+					}
+				}
+				
+				// Moving South
+				else if (thisCube->dir == 3) {
+					// If we've hit south wall, pick new direction
+					if(thisCube->y == VERTICALNUM - 1) {
+						do {
+							thisCube->dir = Random(4);
+						} while(thisCube->dir == 3);
+					}
+					else {
+						OS_bWait(&LCDFree);
+						PaintCube(thisCube->x, thisCube->y, LCD_BLACK);
+						(thisCube->y)++;
+						PaintCube(thisCube->x, thisCube->y, thisCube->color);
+						OS_bSignal(&LCDFree);
+					}
+				}
+				
+				// Make it so the blocks don't move around so fast the user
+				// can't see or catch them
+				OS_Sleep(50);
 			}
 		}
 		OS_Kill(); // Cube should disappear, kill the thread
@@ -149,7 +248,6 @@ void CubeThread (void){
 	OS_Kill(); //Life = 0, game is over, kill the thread
 }
 
-extern Sema4Type LCDFree;
 uint16_t origin[2]; 	// The original ADC value of x,y if the joystick is not touched, used as reference
 int16_t x = 63;  			// horizontal position of the crosshair, initially 63
 int16_t y = 63;  			// vertical position of the crosshair, initially 63
@@ -304,7 +402,7 @@ void SW1Push(void){
 // inputs:  none
 // outputs: none
 void Consumer(void){
-	while(NumSamples < RUNLENGTH){
+	while(life){
 		jsDataType data;
 		JsFifo_Get(&data);
 		OS_bWait(&LCDFree);
@@ -312,8 +410,8 @@ void Consumer(void){
 		BSP_LCD_DrawCrosshair(prevx, prevy, LCD_BLACK); // Draw a black crosshair
 		BSP_LCD_DrawCrosshair(data.x, data.y, LCD_RED); // Draw a red crosshair
 
-		BSP_LCD_Message(1, 5, 3, "X: ", x);		
-		BSP_LCD_Message(1, 5, 12, "Y: ", y);
+		BSP_LCD_Message(1, 5, 0, "Score:", score);
+		BSP_LCD_Message(1, 5, 11, "Life:", life);
 		ConsumerCount++;
 		OS_bSignal(&LCDFree);
 		prevx = data.x; 
@@ -335,7 +433,7 @@ void Consumer(void){
 // inputs:  none
 // outputs: none
 
-void CubeNumCalc(void){ 
+void CubeNumCalc(void){
 	uint16_t CurrentX,CurrentY;
   while(1) {
 		if(NumSamples < RUNLENGTH){
@@ -493,7 +591,6 @@ void CrossHair_Init(void){
 
 //******************* Main Function**********
 int main(void){
-  int i;
 	OS_Init();           // initialize, disable interrupts
 	Device_Init();
   CrossHair_Init();
@@ -502,13 +599,13 @@ int main(void){
   MaxJitter = 0;       // in 1us units
 	PseudoCount = 0;
 	
-	for(i = 0; i < 6; i++)
-		PaintCube(i, 0, colors[i]);
-	
 	
 //********initialize communication channels
   JsFifo_Init();
 
+	initCubes();
+	seedRandom(42);
+	
 //*******attach background tasks***********
   OS_AddSW1Task(&SW1Push, 4);
 	OS_AddSW2Task(&SW2Push, 4);
@@ -519,7 +616,8 @@ int main(void){
 // create initial foreground threads
   NumCreated += OS_AddThread(&Interpreter, 128, 2); 
   NumCreated += OS_AddThread(&Consumer, 128, 1); 
-	NumCreated += OS_AddThread(&CubeNumCalc, 128, 3); 
+	NumCreated += OS_AddThread(&CubeNumCalc, 128, 3);
+	NumCreated += OS_AddThread(&CubeThread, 128, 1);
 	//NumCreated += OS_AddThread(&Display, 128, 3);
  
  
