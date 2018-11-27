@@ -22,6 +22,7 @@
 #define CROSSSIZE            	5
 #define PERIOD               	4000000   // DAS 20Hz sampling period in system time units
 #define PSEUDOPERIOD         	8000000
+#define EXPIREPERIOD          80000
 #define LIFETIME             	1000
 #define RUNLENGTH            	600 // 30 seconds run length
 
@@ -468,6 +469,16 @@ void Consumer(void){
   OS_Kill();  // done
 }
 
+void UpdateExpires(void) {
+	int i;
+	for(i = 0; i < NUMOFCUBES; i++) {
+		if(CubeArray[i].idle == 0) {
+			if(CubeArray[i].expired > 0) {
+				(CubeArray[i].expired)--;
+			}
+		}
+	}
+}
 
 //--------------end of Task 3-----------------------------
 
@@ -657,7 +668,7 @@ int main(void){
   OS_AddSW1Task(&SW1Push, 4);
 	OS_AddSW2Task(&SW2Push, 4);
   OS_AddPeriodicThread(&Producer, PERIOD, 3); // 2 kHz real time sampling of PD3
-	OS_AddPeriodicThread(&PeriodicUpdater, PSEUDOPERIOD, 3);
+	OS_AddPeriodicThread(&UpdateExpires, EXPIREPERIOD, 3);
 	
   NumCreated = 0 ;
 // create initial foreground threads
