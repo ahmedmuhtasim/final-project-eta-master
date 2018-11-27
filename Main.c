@@ -151,16 +151,15 @@ void CubeThread (void){
 	
 	// 3.move the cube while it is not hit or expired
 	while(life){
-		while (!thisCube->hit && thisCube->expired != 0){
-			if (thisCube->x == GetCrossHairX() && thisCube->y == GetCrossHairY())
-				thisCube->hit = 1;
-			
+		while (1){
 			if(thisCube->hit){
 				score++;
 				OS_bWait(&LCDFree);
 				PaintCube(thisCube->x, thisCube->y, LCD_BLACK);
 				OS_bSignal(&LCDFree);
 				OS_bSignal(&BlockArray[thisCube->x][thisCube->y].BlockFree);
+				thisCube->idle = 1;
+				break;
 			}
 			else if (thisCube->expired == 0){
 				life--;
@@ -168,6 +167,7 @@ void CubeThread (void){
 				PaintCube(thisCube->x, thisCube->y, LCD_BLACK);
 				OS_bSignal(&LCDFree);
 				OS_bSignal(&BlockArray[thisCube->x][thisCube->y].BlockFree);
+				break;
 			}
 			else{
 				// Moving North
@@ -181,7 +181,9 @@ void CubeThread (void){
 					else {
 						OS_bWait(&LCDFree);
 						PaintCube(thisCube->x, thisCube->y, LCD_BLACK);
+						OS_bSignal(&(BlockArray[thisCube->x][thisCube->y].BlockFree));
 						(thisCube->y)--;
+						OS_bWait(&(BlockArray[thisCube->x][thisCube->y].BlockFree));
 						PaintCube(thisCube->x, thisCube->y, thisCube->color);
 						OS_bSignal(&LCDFree);
 					}
@@ -198,7 +200,9 @@ void CubeThread (void){
 					else {
 						OS_bWait(&LCDFree);
 						PaintCube(thisCube->x, thisCube->y, LCD_BLACK);
+						OS_bSignal(&(BlockArray[thisCube->x][thisCube->y].BlockFree));
 						(thisCube->x)--;
+						OS_bWait(&(BlockArray[thisCube->x][thisCube->y].BlockFree));
 						PaintCube(thisCube->x, thisCube->y, thisCube->color);
 						OS_bSignal(&LCDFree);
 					}
@@ -215,7 +219,9 @@ void CubeThread (void){
 					else {
 						OS_bWait(&LCDFree);
 						PaintCube(thisCube->x, thisCube->y, LCD_BLACK);
+						OS_bSignal(&(BlockArray[thisCube->x][thisCube->y].BlockFree));
 						(thisCube->x)++;
+						OS_bWait(&(BlockArray[thisCube->x][thisCube->y].BlockFree));
 						PaintCube(thisCube->x, thisCube->y, thisCube->color);
 						OS_bSignal(&LCDFree);
 					}
@@ -232,7 +238,9 @@ void CubeThread (void){
 					else {
 						OS_bWait(&LCDFree);
 						PaintCube(thisCube->x, thisCube->y, LCD_BLACK);
+						OS_bSignal(&(BlockArray[thisCube->x][thisCube->y].BlockFree));
 						(thisCube->y)++;
+						OS_bWait(&(BlockArray[thisCube->x][thisCube->y].BlockFree));
 						PaintCube(thisCube->x, thisCube->y, thisCube->color);
 						OS_bSignal(&LCDFree);
 					}
@@ -402,14 +410,53 @@ void SW1Push(void){
 // inputs:  none
 // outputs: none
 void Consumer(void){
+	unsigned int cube_width = MAX_WIDTH / 6;
+	unsigned int cube_height = MAX_HEIGHT / 6;
+	unsigned int xblock, yblock;
+	
 	while(life){
 		jsDataType data;
+		int i;
 		JsFifo_Get(&data);
 		OS_bWait(&LCDFree);
 			
 		BSP_LCD_DrawCrosshair(prevx, prevy, LCD_BLACK); // Draw a black crosshair
 		BSP_LCD_DrawCrosshair(data.x, data.y, LCD_RED); // Draw a red crosshair
-
+		
+		if(data.x < cube_width)
+			xblock = 0;
+		else if(data.x < 2*cube_width)
+			xblock = 1;
+		else if(data.x < 3*cube_width)
+			xblock = 2;
+		else if(data.x < 4*cube_width)
+			xblock = 3;
+		else if(data.x < 5*cube_width)
+			xblock = 4;
+		else if(data.x < 6*cube_width)
+			xblock = 5;
+		
+		if(data.y < cube_height)
+			yblock = 0;
+		else if(data.y < 2*cube_height)
+			yblock = 1;
+		else if(data.y < 3*cube_height)
+			yblock = 2;
+		else if(data.y < 4*cube_height)
+			yblock = 3;
+		else if(data.y < 5*cube_height)
+			yblock = 4;
+		else if(data.y < 6*cube_height)
+			yblock = 5;
+		
+		for(i = 0; i < NUMOFCUBES; i++) {
+			if(CubeArray[i].idle == 0) {
+				if(CubeArray[i].x == xblock && CubeArray[i].y == yblock) {
+					CubeArray[i].hit = 1;
+				}
+			}
+		}
+		
 		BSP_LCD_Message(1, 5, 0, "Score:", score);
 		BSP_LCD_Message(1, 5, 11, "Life:", life);
 		ConsumerCount++;
@@ -617,6 +664,7 @@ int main(void){
   NumCreated += OS_AddThread(&Interpreter, 128, 2); 
   NumCreated += OS_AddThread(&Consumer, 128, 1); 
 	NumCreated += OS_AddThread(&CubeNumCalc, 128, 3);
+	NumCreated += OS_AddThread(&CubeThread, 128, 1);
 	NumCreated += OS_AddThread(&CubeThread, 128, 1);
 	//NumCreated += OS_AddThread(&Display, 128, 3);
  
