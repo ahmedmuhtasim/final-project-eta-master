@@ -22,241 +22,10 @@
 #define CROSSSIZE            	5
 #define PERIOD               	4000000   // DAS 20Hz sampling period in system time units
 #define PSEUDOPERIOD         	8000000
-#define EXPIREPERIOD          80000
 #define LIFETIME             	1000
 #define RUNLENGTH            	600 // 30 seconds run length
 
-#define VERTICALNUM 6
-#define HORIZONTALNUM 6
-#define NUMOFCUBES	5				// Max number of cubess
-#define LIFEOFCUBE 10000		// presently 10 seconds for milisecond unit
-
-uint16_t colors[11] = {LCD_WHITE, LCD_GREY, 
-LCD_RED, LCD_GREEN, LCD_CYAN, LCD_ORANGE, 
-LCD_YELLOW, LCD_LIGHTGREEN, LCD_DARKBLUE,
-LCD_MAGENTA, LCD_ORANGE};
-
-// Global variables for life and score
-unsigned int life = 10;
-unsigned int score = 0;
-
-// Global variable for PRNG
-unsigned int Xn;
-
 extern Sema4Type LCDFree;
-
-// Struct for breaking screen into blocks
-typedef struct {
- uint32_t position[2];
- Sema4Type BlockFree;
-} block;
-
-block BlockArray[HORIZONTALNUM][VERTICALNUM];
-
-// Struct for representing a cube
-typedef struct {
-	unsigned int idle;	// 0 or 1
-	unsigned int hit;	// 0 or 1
-	unsigned int	expired; // Counts down by the 1ms software timer for each CubeArray member
-	unsigned int x;	// current x
-	unsigned int y; // current y
-	unsigned int dir; 	// 0 = N, 1 = E, 2 = S, 3 = W
-	uint16_t color;	 		// get colors from LCD.h, 
-} cube;
-
-cube CubeArray[NUMOFCUBES];
-
-// Initialize Cube and Block Arrays
-void initCubes(void) {
-	int i, j;
-	for(i = 0; i < NUMOFCUBES; i++) {
-		CubeArray[i].idle = 1;
-	}
-	
-	for(i = 0; i < HORIZONTALNUM; i++) {
-		for(j = 0; j < VERTICALNUM; j++) {
-			BlockArray[i][j].position[0] = i;
-			BlockArray[i][j].position[1] = j;
-			OS_InitSemaphore(&(BlockArray[i][j].BlockFree), 1);
-		}
-	}
-}
-
-// Seed PRNG
-void seedRandom(unsigned int seed) {
-	Xn = seed;
-}
-
-// Return random value from 0 to range-1
-// using Linear Congruential Generator
-unsigned int Random(unsigned short range)
-{
-	unsigned int m = 2147483647;
-	unsigned int a = 16807;
-	unsigned int c = 0;
-	
-	Xn = (a * Xn + c) % m;
-	return Xn % range;
-}
-
-unsigned int GetCrossHairX()
-{
-	return 47;
-}
-
-unsigned int GetCrossHairY()
-{
-	return 47;
-}
-
-void CubeThread (void){
-	// 1.allocate an idle cube for the object
-	cube *thisCube = 0;		// Points to the cube assigned to this thread
-	
-	unsigned int n;
-	unsigned int i, j;
-	for (n = 0; n < NUMOFCUBES; n++){
-		if (CubeArray[n].idle){
-			CubeArray[n].idle = 0;
-			thisCube = &(CubeArray[n]);
-			break;
-		}
-	}
-	
-	if (&thisCube == 0)
-		OS_Kill();				// This means that thisCube is null. That would indicate that all the cubes are taken and so this thread should be killed.
-		
-	// 2.initialize color/shape and the first direction
-	// asign color, There may be multiples of same color (unlikely tho)...
-	thisCube->color = colors[Random(11)];
-	// assign shape
-	
-	// assign location
-	do{
-		i = Random(6); j = Random(6);
-	} while (BlockArray[i][j].BlockFree.Value == 0);
-	
-	// Paint cube's initial position
-	thisCube->x = i;
-	thisCube->y = j;
-	PaintCube(thisCube->x, thisCube->y, thisCube->color);
-	
-	// assign direction
-	thisCube->dir = Random(4);
-	
-	// cube is not hit yet
-	thisCube->hit = 0;
-	
-	// assign lifeTime
-	thisCube->expired = LIFEOFCUBE;
-	
-	// 3.move the cube while it is not hit or expired
-	while(life){
-		while (1){
-			if(thisCube->hit){
-				score++;
-				OS_bWait(&LCDFree);
-				PaintCube(thisCube->x, thisCube->y, LCD_BLACK);
-				OS_bSignal(&LCDFree);
-				OS_bSignal(&BlockArray[thisCube->x][thisCube->y].BlockFree);
-				thisCube->idle = 1;
-				break;
-			}
-			else if (thisCube->expired == 0){
-				life--;
-				OS_bWait(&LCDFree);
-				PaintCube(thisCube->x, thisCube->y, LCD_BLACK);
-				OS_bSignal(&LCDFree);
-				OS_bSignal(&BlockArray[thisCube->x][thisCube->y].BlockFree);
-				break;
-			}
-			else{
-				// Moving North
-				if(thisCube->dir == 0) {
-					// If we've hit north wall, pick new direction
-					if(thisCube->y == 0) {
-						do {
-							thisCube->dir = Random(4);
-						} while(thisCube->dir == 0);
-					}
-					else {
-						OS_bWait(&LCDFree);
-						PaintCube(thisCube->x, thisCube->y, LCD_BLACK);
-						OS_bSignal(&(BlockArray[thisCube->x][thisCube->y].BlockFree));
-						(thisCube->y)--;
-						OS_bWait(&(BlockArray[thisCube->x][thisCube->y].BlockFree));
-						PaintCube(thisCube->x, thisCube->y, thisCube->color);
-						OS_bSignal(&LCDFree);
-					}
-				}
-				
-				// Moving West
-				else if (thisCube->dir == 1) {
-					// If we've hit west wall, pick new direction
-					if(thisCube->x == 0) {
-						do {
-							thisCube->dir = Random(4);
-						} while(thisCube->dir == 1);
-					}
-					else {
-						OS_bWait(&LCDFree);
-						PaintCube(thisCube->x, thisCube->y, LCD_BLACK);
-						OS_bSignal(&(BlockArray[thisCube->x][thisCube->y].BlockFree));
-						(thisCube->x)--;
-						OS_bWait(&(BlockArray[thisCube->x][thisCube->y].BlockFree));
-						PaintCube(thisCube->x, thisCube->y, thisCube->color);
-						OS_bSignal(&LCDFree);
-					}
-				}
-				
-				// Moving East
-				else if(thisCube->dir == 2) {
-					// If we've hit east wall, pick new direction
-					if(thisCube->x == HORIZONTALNUM - 1) {
-						do {
-							thisCube->dir = Random(4);
-						} while(thisCube->dir == 2);
-					}
-					else {
-						OS_bWait(&LCDFree);
-						PaintCube(thisCube->x, thisCube->y, LCD_BLACK);
-						OS_bSignal(&(BlockArray[thisCube->x][thisCube->y].BlockFree));
-						(thisCube->x)++;
-						OS_bWait(&(BlockArray[thisCube->x][thisCube->y].BlockFree));
-						PaintCube(thisCube->x, thisCube->y, thisCube->color);
-						OS_bSignal(&LCDFree);
-					}
-				}
-				
-				// Moving South
-				else if (thisCube->dir == 3) {
-					// If we've hit south wall, pick new direction
-					if(thisCube->y == VERTICALNUM - 1) {
-						do {
-							thisCube->dir = Random(4);
-						} while(thisCube->dir == 3);
-					}
-					else {
-						OS_bWait(&LCDFree);
-						PaintCube(thisCube->x, thisCube->y, LCD_BLACK);
-						OS_bSignal(&(BlockArray[thisCube->x][thisCube->y].BlockFree));
-						(thisCube->y)++;
-						OS_bWait(&(BlockArray[thisCube->x][thisCube->y].BlockFree));
-						PaintCube(thisCube->x, thisCube->y, thisCube->color);
-						OS_bSignal(&LCDFree);
-					}
-				}
-				
-				// Make it so the blocks don't move around so fast the user
-				// can't see or catch them
-				OS_Sleep(50);
-			}
-		}
-		OS_Kill(); // Cube should disappear, kill the thread
-	}
-	OS_Kill(); //Life = 0, game is over, kill the thread
-}
-
 uint16_t origin[2]; 	// The original ADC value of x,y if the joystick is not touched, used as reference
 int16_t x = 63;  			// horizontal position of the crosshair, initially 63
 int16_t y = 63;  			// vertical position of the crosshair, initially 63
@@ -411,55 +180,16 @@ void SW1Push(void){
 // inputs:  none
 // outputs: none
 void Consumer(void){
-	unsigned int cube_width = MAX_WIDTH / 6;
-	unsigned int cube_height = MAX_HEIGHT / 6;
-	unsigned int xblock, yblock;
-	
-	while(life){
+	while(NumSamples < RUNLENGTH){
 		jsDataType data;
-		int i;
 		JsFifo_Get(&data);
 		OS_bWait(&LCDFree);
 			
 		BSP_LCD_DrawCrosshair(prevx, prevy, LCD_BLACK); // Draw a black crosshair
 		BSP_LCD_DrawCrosshair(data.x, data.y, LCD_RED); // Draw a red crosshair
-		
-		if(data.x < cube_width)
-			xblock = 0;
-		else if(data.x < 2*cube_width)
-			xblock = 1;
-		else if(data.x < 3*cube_width)
-			xblock = 2;
-		else if(data.x < 4*cube_width)
-			xblock = 3;
-		else if(data.x < 5*cube_width)
-			xblock = 4;
-		else if(data.x < 6*cube_width)
-			xblock = 5;
-		
-		if(data.y < cube_height)
-			yblock = 0;
-		else if(data.y < 2*cube_height)
-			yblock = 1;
-		else if(data.y < 3*cube_height)
-			yblock = 2;
-		else if(data.y < 4*cube_height)
-			yblock = 3;
-		else if(data.y < 5*cube_height)
-			yblock = 4;
-		else if(data.y < 6*cube_height)
-			yblock = 5;
-		
-		for(i = 0; i < NUMOFCUBES; i++) {
-			if(CubeArray[i].idle == 0) {
-				if(CubeArray[i].x == xblock && CubeArray[i].y == yblock) {
-					CubeArray[i].hit = 1;
-				}
-			}
-		}
-		
-		BSP_LCD_Message(1, 5, 0, "Score:", score);
-		BSP_LCD_Message(1, 5, 11, "Life:", life);
+
+		BSP_LCD_Message(1, 5, 3, "X: ", x);		
+		BSP_LCD_Message(1, 5, 12, "Y: ", y);
 		ConsumerCount++;
 		OS_bSignal(&LCDFree);
 		prevx = data.x; 
@@ -469,16 +199,6 @@ void Consumer(void){
   OS_Kill();  // done
 }
 
-void UpdateExpires(void) {
-	int i;
-	for(i = 0; i < NUMOFCUBES; i++) {
-		if(CubeArray[i].idle == 0) {
-			if(CubeArray[i].expired > 0) {
-				(CubeArray[i].expired)--;
-			}
-		}
-	}
-}
 
 //--------------end of Task 3-----------------------------
 
@@ -491,7 +211,7 @@ void UpdateExpires(void) {
 // inputs:  none
 // outputs: none
 
-void CubeNumCalc(void){
+void CubeNumCalc(void){ 
 	uint16_t CurrentX,CurrentY;
   while(1) {
 		if(NumSamples < RUNLENGTH){
@@ -648,37 +368,30 @@ void CrossHair_Init(void){
 }
 
 //******************* Main Function**********
-int main(void){
-	OS_Init();           // initialize, disable interrupts
+int main(void){ 
+  OS_Init();           // initialize, disable interrupts
 	Device_Init();
   CrossHair_Init();
   DataLost = 0;        // lost data between producer and consumer
   NumSamples = 0;
   MaxJitter = 0;       // in 1us units
 	PseudoCount = 0;
-	
-	
+
 //********initialize communication channels
   JsFifo_Init();
 
-	initCubes();
-	seedRandom(42);
-	
 //*******attach background tasks***********
   OS_AddSW1Task(&SW1Push, 4);
 	OS_AddSW2Task(&SW2Push, 4);
   OS_AddPeriodicThread(&Producer, PERIOD, 3); // 2 kHz real time sampling of PD3
-	OS_AddPeriodicThread(&UpdateExpires, EXPIREPERIOD, 3);
+	OS_AddPeriodicThread(&PeriodicUpdater, PSEUDOPERIOD, 3);
 	
   NumCreated = 0 ;
 // create initial foreground threads
   NumCreated += OS_AddThread(&Interpreter, 128, 2); 
   NumCreated += OS_AddThread(&Consumer, 128, 1); 
-	NumCreated += OS_AddThread(&CubeNumCalc, 128, 3);
-	NumCreated += OS_AddThread(&CubeThread, 128, 1);
-	NumCreated += OS_AddThread(&CubeThread, 128, 1);
-	//NumCreated += OS_AddThread(&Display, 128, 3);
- 
+	NumCreated += OS_AddThread(&CubeNumCalc, 128, 3); 
+	NumCreated += OS_AddThread(&Display, 128, 3);
  
   OS_Launch(TIME_2MS); // doesn't return, interrupts enabled in here
 	return 0;            // this never executes
