@@ -174,7 +174,8 @@ void CubeThread (void){
 				// Moving North
 				if(thisCube->dir == 0) {
 					// If we've hit north wall, pick new direction
-					if(thisCube->y == 0) {
+					if(thisCube->y == 0 
+             || !(BlockArray[thisCube->x][thisCube->y-1].BlockFree.Value)) {
 						do {
 							thisCube->dir = Random(4);
 						} while(thisCube->dir == 0);
@@ -193,7 +194,8 @@ void CubeThread (void){
 				// Moving West
 				else if (thisCube->dir == 1) {
 					// If we've hit west wall, pick new direction
-					if(thisCube->x == 0) {
+					if(thisCube->x == 0
+             || !(BlockArray[thisCube->x-1][thisCube->y].BlockFree.Value)) {
 						do {
 							thisCube->dir = Random(4);
 						} while(thisCube->dir == 1);
@@ -212,7 +214,8 @@ void CubeThread (void){
 				// Moving East
 				else if(thisCube->dir == 2) {
 					// If we've hit east wall, pick new direction
-					if(thisCube->x == HORIZONTALNUM - 1) {
+					if(thisCube->x == HORIZONTALNUM - 1
+             || !(BlockArray[thisCube->x+1][thisCube->y].BlockFree.Value)) {
 						do {
 							thisCube->dir = Random(4);
 						} while(thisCube->dir == 2);
@@ -231,7 +234,8 @@ void CubeThread (void){
 				// Moving South
 				else if (thisCube->dir == 3) {
 					// If we've hit south wall, pick new direction
-					if(thisCube->y == VERTICALNUM - 1) {
+					if(thisCube->y == VERTICALNUM - 1
+             || !(BlockArray[thisCube->x][thisCube->y+1].BlockFree.Value)) {
 						do {
 							thisCube->dir = Random(4);
 						} while(thisCube->dir == 3);
