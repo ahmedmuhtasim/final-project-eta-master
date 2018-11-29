@@ -40,7 +40,10 @@ LCD_MAGENTA, LCD_ORANGE};
 unsigned int life = 10;
 unsigned int score = 0;
 
-// Global variable for PRNG
+// Global variable for number of cubes present
+unsigned int numCubes = 0;
+
+// Global variable seed for PRNG
 unsigned int Xn;
 
 extern Sema4Type LCDFree;
@@ -132,14 +135,19 @@ void CubeThread (void){
 	// assign shape
 	
 	// assign location
-	do{
-		i = Random(6); j = Random(6);
-	} while (BlockArray[i][j].BlockFree.Value == 0);
+//	do{
+//		i = Random(6); j = Random(6);
+//	} while (BlockArray[i][j].BlockFree.Value == 0);
+	
+	i = Random(6); j = Random(6);
+	OS_bWait(&(BlockArray[i][j].BlockFree));
 	
 	// Paint cube's initial position
 	thisCube->x = i;
 	thisCube->y = j;
+	OS_bWait(&LCDFree);
 	PaintCube(thisCube->x, thisCube->y, thisCube->color);
+	OS_bSignal(&LCDFree);
 	
 	// assign direction
 	thisCube->dir = Random(4);
@@ -152,7 +160,6 @@ void CubeThread (void){
 	
 	// 3.move the cube while it is not hit or expired
 	while(life){
-		while (1){
 			if(thisCube->hit){
 				score++;
 				OS_bWait(&LCDFree);
@@ -255,10 +262,26 @@ void CubeThread (void){
 				// can't see or catch them
 				OS_Sleep(50);
 			}
-		}
-		OS_Kill(); // Cube should disappear, kill the thread
 	}
+	thisCube->idle = 1;
+	numCubes--;
 	OS_Kill(); //Life = 0, game is over, kill the thread
+}
+
+void GenerateCubes(void) {
+	int i, cubesToGenerate;
+	while(life) {
+		if(numCubes == 0) {
+			cubesToGenerate = Random(5);
+			
+			for(i = 0; i < cubesToGenerate; i++) {
+				numCubes++;
+				OS_AddThread(&CubeThread, 128, 2);
+			}
+		}
+		else
+			OS_Suspend();
+	}
 }
 
 uint16_t origin[2]; 	// The original ADC value of x,y if the joystick is not touched, used as reference
@@ -652,6 +675,7 @@ void CrossHair_Init(void){
 }
 
 //******************* Main Function**********
+
 int main(void){
 	OS_Init();           // initialize, disable interrupts
 	Device_Init();
@@ -676,11 +700,12 @@ int main(void){
 	
   NumCreated = 0 ;
 // create initial foreground threads
-  NumCreated += OS_AddThread(&Interpreter, 128, 2); 
-  NumCreated += OS_AddThread(&Consumer, 128, 1); 
+  //NumCreated += OS_AddThread(&Interpreter, 128, 2); 
+  NumCreated += OS_AddThread(&Consumer, 128, 1);
 	NumCreated += OS_AddThread(&CubeNumCalc, 128, 3);
-	NumCreated += OS_AddThread(&CubeThread, 128, 1);
-	NumCreated += OS_AddThread(&CubeThread, 128, 1);
+	//NumCreated += OS_AddThread(&CubeThread, 128, 1);
+	//NumCreated += OS_AddThread(&CubeThread, 128, 1);
+	NumCreated += OS_AddThread(&GenerateCubes, 128, 1);
 	//NumCreated += OS_AddThread(&Display, 128, 3);
  
  
