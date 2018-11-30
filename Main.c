@@ -200,10 +200,8 @@ void CubeThread (void){
 						OS_bSignal(&LCDFree);
 					}
 				}
-				OS_bSignal(&criticalTest);
 				
 				// Moving West
-				OS_bWait(&criticalTest);
 				else if (thisCube->dir == 1) {
 					// If we've hit west wall, pick new direction
 					if(thisCube->x == 0
@@ -222,10 +220,8 @@ void CubeThread (void){
 						OS_bSignal(&LCDFree);
 					}
 				}
-				OS_bSignal(&criticalTest);
 				
 				// Moving East
-				OS_bWait(&criticalTest);
 				else if(thisCube->dir == 2) {
 					// If we've hit east wall, pick new direction
 					if(thisCube->x == HORIZONTALNUM - 1
@@ -244,10 +240,8 @@ void CubeThread (void){
 						OS_bSignal(&LCDFree);
 					}
 				}
-				OS_bSignal(&criticalTest);
 				
 				// Moving South
-				OS_bWait(&criticalTest);
 				else if (thisCube->dir == 3) {
 					// If we've hit south wall, pick new direction
 					if(thisCube->y == VERTICALNUM - 1
