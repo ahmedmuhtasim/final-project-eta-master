@@ -47,6 +47,7 @@ unsigned int numCubes = 0;
 unsigned int Xn;
 
 extern Sema4Type LCDFree;
+Sema4Type criticalTest;
 
 // Struct for breaking screen into blocks
 typedef struct {
@@ -83,6 +84,7 @@ void initCubes(void) {
 			OS_InitSemaphore(&(BlockArray[i][j].BlockFree), 1);
 		}
 	}
+	OS_InitSemaphore(&criticalTest, 1);
 }
 
 // Seed PRNG
@@ -179,6 +181,7 @@ void CubeThread (void){
 			}
 			else{
 				// Moving North
+				OS_bWait(&criticalTest);
 				if(thisCube->dir == 0) {
 					// If we've hit north wall, pick new direction
 					if(thisCube->y == 0 
@@ -197,8 +200,10 @@ void CubeThread (void){
 						OS_bSignal(&LCDFree);
 					}
 				}
+				OS_bSignal(&criticalTest);
 				
 				// Moving West
+				OS_bWait(&criticalTest);
 				else if (thisCube->dir == 1) {
 					// If we've hit west wall, pick new direction
 					if(thisCube->x == 0
@@ -217,8 +222,10 @@ void CubeThread (void){
 						OS_bSignal(&LCDFree);
 					}
 				}
+				OS_bSignal(&criticalTest);
 				
 				// Moving East
+				OS_bWait(&criticalTest);
 				else if(thisCube->dir == 2) {
 					// If we've hit east wall, pick new direction
 					if(thisCube->x == HORIZONTALNUM - 1
@@ -237,8 +244,10 @@ void CubeThread (void){
 						OS_bSignal(&LCDFree);
 					}
 				}
+				OS_bSignal(&criticalTest);
 				
 				// Moving South
+				OS_bWait(&criticalTest);
 				else if (thisCube->dir == 3) {
 					// If we've hit south wall, pick new direction
 					if(thisCube->y == VERTICALNUM - 1
@@ -257,6 +266,7 @@ void CubeThread (void){
 						OS_bSignal(&LCDFree);
 					}
 				}
+				OS_bSignal(&criticalTest);
 				
 				// Make it so the blocks don't move around so fast the user
 				// can't see or catch them
