@@ -286,6 +286,7 @@ void GenerateCubes(void) {
 		else
 			OS_Suspend();
 	}
+	OS_Kill();
 }
 
 uint16_t origin[2]; 	// The original ADC value of x,y if the joystick is not touched, used as reference
@@ -356,7 +357,7 @@ void Producer(void){
 	unsigned static long LastTime;  // time at previous ADC sample
 	unsigned long thisTime;         // time at current ADC sample
 	long jitter;                    // time between measured and expected, in us
-	if (NumSamples < RUNLENGTH){
+	if (1/*NumSamples < RUNLENGTH*/){
 		BSP_Joystick_Input(&rawX,&rawY,&select);
 		thisTime = OS_Time();       // current time, 12.5 ns
 		UpdateWork += UpdatePosition(rawX,rawY,&data); // calculation work
