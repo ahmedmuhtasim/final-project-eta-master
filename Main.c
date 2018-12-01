@@ -455,7 +455,7 @@ void Consumer(void){
 			
 		BSP_LCD_DrawCrosshair(prevx, prevy, LCD_BLACK); // Draw a black crosshair
 		BSP_LCD_DrawCrosshair(data.x, data.y, LCD_RED); // Draw a red crosshair
-		
+
 		if(data.x < cube_width)
 			xblock = 0;
 		else if(data.x < 2*cube_width)
@@ -481,10 +481,15 @@ void Consumer(void){
 			yblock = 4;
 		else if(data.y < 6*cube_height)
 			yblock = 5;
-		
+
 		for(i = 0; i < NUMOFCUBES; i++) {
 			if(CubeArray[i].idle == 0) {
-				if(CubeArray[i].x == xblock && CubeArray[i].y == yblock) {
+				char cubel=CubeArray[i].x*cube_width, cuber=(CubeArray[i].x+1)*cube_width;
+				char cubet=CubeArray[i].y*cube_height, cubeb=(CubeArray[i].y+1)*cube_height;
+				//if(CubeArray[i].x == xblock && CubeArray[i].y == yblock) {
+				//if(CubeArray[i].x == area[0] && CubeArray[i].y == area[1]) {
+				if( ((data.x < cuber) && (data.x >= cubel) && (data.y+4 >= cubet) && (data.y-4 < cubeb))
+					||((data.y < cubeb) && (data.y >= cubet) && (data.x+4 >= cubel) && (data.x-4 < cuber))){
 					CubeArray[i].hit = 1;
 				}
 			}
@@ -630,6 +635,7 @@ void Display(void){
 void Restart(void){
 	uint32_t StartTime,CurrentTime,ElapsedTime;
 	NumSamples = RUNLENGTH; // first kill the foreground threads
+	life = 0;
 	OS_Sleep(50); // wait
 	StartTime = OS_MsTime();
 	ElapsedTime = 0;
@@ -650,8 +656,11 @@ void Restart(void){
 	MaxJitter = 0;       // in 1us units
 	PseudoCount = 0;
 	x = 63; y = 63;
+	life = 10;
+	score = 0;
 	NumCreated += OS_AddThread(&Consumer,128,1); 
-	NumCreated += OS_AddThread(&Display,128,3);
+	//NumCreated += OS_AddThread(&Display,128,3);
+	NumCreated += OS_AddThread(&GenerateCubes, 128, 1);
   OS_Kill();  // done, OS does not return from a Kill
 } 
 
