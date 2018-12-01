@@ -269,6 +269,10 @@ void CubeThread (void){
 	}
 	thisCube->idle = 1;
 	numCubes--;
+	OS_bWait(&LCDFree);
+	PaintCube(thisCube->x, thisCube->y, LCD_BLACK);
+	OS_bSignal(&LCDFree);
+	OS_bSignal(&BlockArray[thisCube->x][thisCube->y].BlockFree);
 	OS_Kill(); //Life = 0, game is over, kill the thread
 }
 
@@ -445,7 +449,6 @@ void SW1Push(void){
 void Consumer(void){
 	unsigned int cube_width = MAX_WIDTH / 6;
 	unsigned int cube_height = MAX_HEIGHT / 6;
-	unsigned int xblock, yblock;
 	
 	while(life){
 		jsDataType data;
@@ -455,32 +458,6 @@ void Consumer(void){
 			
 		BSP_LCD_DrawCrosshair(prevx, prevy, LCD_BLACK); // Draw a black crosshair
 		BSP_LCD_DrawCrosshair(data.x, data.y, LCD_RED); // Draw a red crosshair
-
-		if(data.x < cube_width)
-			xblock = 0;
-		else if(data.x < 2*cube_width)
-			xblock = 1;
-		else if(data.x < 3*cube_width)
-			xblock = 2;
-		else if(data.x < 4*cube_width)
-			xblock = 3;
-		else if(data.x < 5*cube_width)
-			xblock = 4;
-		else if(data.x < 6*cube_width)
-			xblock = 5;
-		
-		if(data.y < cube_height)
-			yblock = 0;
-		else if(data.y < 2*cube_height)
-			yblock = 1;
-		else if(data.y < 3*cube_height)
-			yblock = 2;
-		else if(data.y < 4*cube_height)
-			yblock = 3;
-		else if(data.y < 5*cube_height)
-			yblock = 4;
-		else if(data.y < 6*cube_height)
-			yblock = 5;
 
 		for(i = 0; i < NUMOFCUBES; i++) {
 			if(CubeArray[i].idle == 0) {
