@@ -16,6 +16,7 @@
 #include "FIFO.h"
 #include "joystick.h"
 #include "PORTE.h"
+#include "buzzer.h"
 
 // Constants
 #define BGCOLOR     					LCD_BLACK
@@ -325,6 +326,7 @@ void Device_Init(void){
 	UART_Init();
 	BSP_LCD_OutputInit();
 	BSP_Joystick_Init();
+	BSP_Buzzer_Init();
 }
 //------------------Task 1--------------------------------
 // background thread executed at 20 Hz
@@ -463,8 +465,6 @@ void Consumer(void){
 			if(CubeArray[i].idle == 0) {
 				char cubel=CubeArray[i].x*cube_width, cuber=(CubeArray[i].x+1)*cube_width;
 				char cubet=CubeArray[i].y*cube_height, cubeb=(CubeArray[i].y+1)*cube_height;
-				//if(CubeArray[i].x == xblock && CubeArray[i].y == yblock) {
-				//if(CubeArray[i].x == area[0] && CubeArray[i].y == area[1]) {
 				if( ((data.x < cuber) && (data.x >= cubel) && (data.y+4 >= cubet) && (data.y-4 < cubeb))
 					||((data.y < cubeb) && (data.y >= cubet) && (data.x+4 >= cubel) && (data.x-4 < cuber))){
 					CubeArray[i].hit = 1;
