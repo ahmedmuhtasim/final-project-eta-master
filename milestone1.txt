@@ -1,0 +1,1 @@
+The buzzer initialization code was written this week. It uses the hardware PWM of the TM4C123G microcontroller.
